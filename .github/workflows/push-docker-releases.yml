@@ -5,6 +5,10 @@ on:
     branches: [ main ]
     tags:
       - 'v*'
+  schedule:
+    # Daily rebuild to pick up base image / Alpine security fixes
+    - cron: '0 4 * * *'
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -26,6 +30,8 @@ jobs:
             ghcr.io/${{ github.repository }}
           tags: |
             type=ref,event=branch
+            type=raw,value=main,enable=${{ github.event_name != 'push' && github.ref == 'refs/heads/main' }}
+            type=schedule,pattern=nightly
             type=ref,event=tag
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
@@ -50,6 +56,8 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           push: true
+          pull: true
+          no-cache: true
           platforms: linux/arm64,linux/amd64
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
